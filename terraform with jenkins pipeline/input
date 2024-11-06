@@ -1,0 +1,68 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Prepare Terraform Configuration') {
+            steps {
+                script {
+                    // Create Terraform configuration file (main.tf)
+                    writeFile file: 'main.tf', text: '''
+                    provider "local" {}
+
+                    resource "local_file" "example" {
+                      filename = "${path.module}/example.txt"
+                      content  = "Hello, Terraform!"
+                    }
+                    '''
+                }
+            }
+        }
+
+        stage('Terraform Init') {
+            steps {
+                // Initialize Terraform
+                sh 'terraform init'
+            }
+        }
+
+        stage('Terraform Plan') {
+            steps {
+                // Run Terraform plan to preview changes
+                sh 'terraform plan -out=tfplan'
+            }
+        }
+
+        stage('Terraform Apply') {
+            steps {
+                // Apply Terraform changes
+                sh 'terraform apply tfplan'
+            }
+        }
+
+        stage('Check Created File') {
+            steps {
+                // Check if the file was created and display its content
+                sh 'cat example.txt'
+            }
+        }
+
+        stage('Clean Up') {
+            steps {
+                // Remove Terraform plan file
+                sh 'rm -f tfplan'
+            }
+        }
+    }
+
+    post {
+        always {
+            cleanWs() // Clean workspace after build
+        }
+        success {
+            echo 'File created successfully with Terraform!'
+        }
+        failure {
+            echo 'Terraform operation failed.'
+        }
+    }
+}
